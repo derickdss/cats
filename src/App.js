@@ -6,6 +6,8 @@ import IconButton from "@material-ui/core/IconButton";
 import StarBorderIcon from "@material-ui/icons/StarBorder";
 import ImageListItem from "@material-ui/core/ImageListItem";
 import ImageListItemBar from "@material-ui/core/ImageListItemBar";
+import AddCircleOutlineOutlinedIcon from "@material-ui/icons/AddCircleOutlineOutlined";
+import IndeterminateCheckBoxOutlinedIcon from "@material-ui/icons/IndeterminateCheckBoxOutlined";
 
 const App = () => {
   const [imagesFetched, setImagesFetched] = useState(false);
@@ -15,6 +17,7 @@ const App = () => {
   const [justUploadedImage, setJustUploadedImage] = useState({});
   const [favourites, setFavourites] = useState([]);
   const [favouritesFetched, setFavouritesFetched] = useState([]);
+  const [votes, setVotes] = useState([]);
   const [error, setError] = useState({
     error_status: false,
     error_message: "",
@@ -49,11 +52,22 @@ const App = () => {
     setFavourite,
     imageUpdate,
     favourites,
+    votes,
   }) => {
     if (!loaded) return null;
 
     const starClickHandler = (imageId, sub_id, isFavourite, favouriteId) => {
       setFavourite(imageId, sub_id, isFavourite, favouriteId);
+      imageUpdate();
+    };
+
+    const voteUpClickHandler = async (imageId, sub_id, votesValue) => {
+      voteUp(imageId, sub_id, votesValue);
+      imageUpdate();
+    };
+
+    const voteDownClickHandler = async (imageId, sub_id, votesValue) => {
+      voteDown(imageId, sub_id, votesValue);
       imageUpdate();
     };
 
@@ -75,6 +89,15 @@ const App = () => {
           const favouriteImageIds = favourites.map(
             (favourite) => favourite.image_id
           );
+
+          let imageVotesValue = 0;
+          const imageVotes = votes.filter((vote) => {
+            return vote.image_id === item.id;
+          });
+
+          if (imageVotes.length) {
+            imageVotesValue = imageVotes[0].value;
+          }
 
           const imageIsFavourite = favouriteImageIds.includes(item.id);
           const favouritesImageIndex = favourites.findIndex(
@@ -121,6 +144,43 @@ const App = () => {
                     >
                       <StarBorderIcon />
                     </IconButton>
+                    <IconButton
+                      sx={{
+                        color: "white",
+                      }}
+                      aria-label={`star ${item.title}`}
+                      onClick={(e) =>
+                        voteUpClickHandler(
+                          item.id,
+                          item.sub_id,
+                          imageVotesValue
+                        )
+                      }
+                    >
+                      <AddCircleOutlineOutlinedIcon />
+                    </IconButton>
+                    <span
+                      style={{
+                        color: "white",
+                        position: "relative",
+                        top: "25px",
+                      }}
+                    >
+                      {imageVotesValue}
+                    </span>
+                    <IconButton
+                      sx={{ color: "white" }}
+                      aria-label={`star ${item.title}`}
+                      onClick={(e) =>
+                        voteDownClickHandler(
+                          item.id,
+                          item.sub_id,
+                          imageVotesValue
+                        )
+                      }
+                    >
+                      <IndeterminateCheckBoxOutlinedIcon />
+                    </IconButton>
                   </div>
                 }
                 actionPosition="left"
@@ -150,6 +210,66 @@ const App = () => {
         setImagesFetched(false);
       });
   }
+
+  const voteUp = async (id, sub_id, votesValue) => {
+    axios.defaults.headers.common["x-api-key"] =
+      "0e4a38a2-b9a3-4865-96b6-156639088101"; //"DEMO-API-KEY"; // Replace this with your API Key
+
+    let requestBody = {
+      image_id: id,
+      sub_id: sub_id,
+      value: votesValue + 1,
+    };
+
+    await axios
+      .post(`https://api.thecatapi.com/v1/votes`, requestBody, {
+        headers: { "Content-Type": "application/json" },
+      })
+      .then((response) => console.log("favorite response", response.data))
+      .then(() => getVotes())
+      .catch((error) => {
+        console.log("favorite errors", error);
+      });
+  };
+
+  const voteDown = async (id, sub_id, votesValue) => {
+    axios.defaults.headers.common["x-api-key"] =
+      "0e4a38a2-b9a3-4865-96b6-156639088101"; //"DEMO-API-KEY"; // Replace this with your API Key
+
+    let requestBody = {
+      image_id: id,
+      sub_id: sub_id,
+      value: votesValue > 0 ? votesValue - 1 : 0,
+    };
+
+    await axios
+      .post(`https://api.thecatapi.com/v1/votes`, requestBody, {
+        headers: { "Content-Type": "application/json" },
+      })
+      .then((response) => console.log("favorite response", response.data))
+      .then(() => getVotes())
+      .catch((error) => {
+        console.log("favorite response", error);
+      });
+  };
+
+  const getVotes = async (sub_id) => {
+    axios.defaults.headers.common["x-api-key"] =
+      "0e4a38a2-b9a3-4865-96b6-156639088101"; //"DEMO-API-KEY"; // Replace this with your API Key
+
+    let requestBody = {
+      params: { order: "DESC", limit: 25 } /*, sub_id: sub_id*/,
+    };
+
+    await axios
+      .get(`https://api.thecatapi.com/v1/votes`, requestBody, {
+        headers: { "Content-Type": "application/json" },
+      })
+      .then((response) => setVotes(response.data))
+      .catch((error) => {
+        console.log("getVotes error", error);
+      });
+  };
 
   const uploadFile = async () => {
     setUploading(true);
@@ -266,6 +386,10 @@ const App = () => {
         loaded={imagesFetched}
         imageUpdate={getUploadedFiles}
         setFavourite={setFavourite}
+        voteUp={voteUp}
+        voteDown={voteDown}
+        getVotes={getVotes}
+        votes={votes}
       />
     </div>
   );
