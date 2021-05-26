@@ -13,6 +13,8 @@ const App = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [justUploadedImage, setJustUploadedImage] = useState({});
+  const [favourites, setFavourites] = useState([]);
+  const [favouritesFetched, setFavouritesFetched] = useState([]);
   const [error, setError] = useState({
     error_status: false,
     error_message: "",
@@ -41,8 +43,19 @@ const App = () => {
     }&fit=crop&auto=format&dpr=2 2x`;
   }
 
-  const ImageGrid = ({ images, loaded }) => {
+  const ImageGrid = ({
+    images,
+    loaded,
+    setFavourite,
+    imageUpdate,
+    favourites,
+  }) => {
     if (!loaded) return null;
+
+    const starClickHandler = (imageId, sub_id, isFavourite, favouriteId) => {
+      setFavourite(imageId, sub_id, isFavourite, favouriteId);
+      imageUpdate();
+    };
 
     return (
       <ImageList
@@ -59,6 +72,18 @@ const App = () => {
         {images.map((item, index) => {
           const cols = item.featured ? 2 : 1;
           const rows = item.featured ? 2 : 1;
+          const favouriteImageIds = favourites.map(
+            (favourite) => favourite.image_id
+          );
+
+          const imageIsFavourite = favouriteImageIds.includes(item.id);
+          const favouritesImageIndex = favourites.findIndex(
+            (favourite) => favourite.image_id === item.id
+          );
+          let favouriteId = 0;
+          if (favouritesImageIndex > -1) {
+            favouriteId = favourites[favouritesImageIndex].id;
+          }
 
           return (
             <ImageListItem key={item.id + index} cols={cols} rows={rows}>
@@ -79,9 +104,20 @@ const App = () => {
                   <div style={{ display: "flex", flexDirection: "row" }}>
                     <IconButton
                       sx={{
-                        color: "white",
+                        color: favouriteImageIds.includes(item.id)
+                          ? "yellow"
+                          : "white",
                       }}
                       aria-label={`star ${item.title}`}
+                      onClick={(e) =>
+                        starClickHandler(
+                          item.id,
+                          item.sub_id,
+                          imageIsFavourite,
+                          favouriteId,
+                          setFavourite
+                        )
+                      }
                     >
                       <StarBorderIcon />
                     </IconButton>
@@ -140,6 +176,54 @@ const App = () => {
       });
   };
 
+  const setFavourite = async (id, sub_id, isFavourite, favouriteId) => {
+    axios.defaults.headers.common["x-api-key"] =
+      "0e4a38a2-b9a3-4865-96b6-156639088101"; //"DEMO-API-KEY"; // Replace this with your API Key
+    let favouritesUrl = `https://api.thecatapi.com/v1/favourites`;
+    let requestBody = { image_id: id, sub_id: sub_id };
+    if (isFavourite) {
+      favouritesUrl = `${favouritesUrl}/${favouriteId}`;
+      requestBody = {};
+
+      await axios
+        .delete(favouritesUrl, requestBody, {
+          headers: { "Content-Type": "application/json" },
+        })
+        .then((response) => console.log("favorite response", response.data))
+        .then(() => getFavourites())
+        .catch((error) => {
+          console.log(" setting favorite error", error);
+        });
+    } else {
+      await axios
+        .post(favouritesUrl, requestBody, {
+          headers: { "Content-Type": "application/json" },
+        })
+        .then((response) => console.log("favorite response", response.data))
+        .then(() => getFavourites())
+        .catch((error) => {
+          console.log("setting favorite error", error);
+        });
+    }
+  };
+
+  async function getFavourites() {
+    setFavouritesFetched(false);
+    axios.defaults.headers.common["x-api-key"] =
+      "0e4a38a2-b9a3-4865-96b6-156639088101"; // Replace this with your API Key
+    let response = await axios
+      .get("https://api.thecatapi.com/v1/favourites")
+      .then((response) => setFavourites(response.data))
+      .then(() => setFavouritesFetched(true))
+      .catch((error) => {
+        setError({
+          error_status: true,
+          error_message: error.response.data.message,
+        });
+        setFavouritesFetched(false);
+      });
+  }
+
   function onFilePicked(e) {
     const files = e.target.files;
     if (files[0] !== undefined) {
@@ -176,7 +260,13 @@ const App = () => {
       >
         Upload
       </button>
-      <ImageGrid images={uploadedImages} loaded={imagesFetched} />
+      <ImageGrid
+        images={uploadedImages}
+        favourites={favourites}
+        loaded={imagesFetched}
+        imageUpdate={getUploadedFiles}
+        setFavourite={setFavourite}
+      />
     </div>
   );
 };
