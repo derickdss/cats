@@ -1,5 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { makeStyles } from "@material-ui/core/styles";
+import ImageList from "@material-ui/core/ImageList";
+import IconButton from "@material-ui/core/IconButton";
+import StarBorderIcon from "@material-ui/icons/StarBorder";
+import ImageListItem from "@material-ui/core/ImageListItem";
+import ImageListItemBar from "@material-ui/core/ImageListItemBar";
 
 const App = () => {
   const [imagesFetched, setImagesFetched] = useState(false);
@@ -11,6 +17,84 @@ const App = () => {
     error_status: false,
     error_message: "",
   });
+
+  const useStyles = makeStyles((theme) => ({
+    root: {
+      display: "flex",
+      flexWrap: "wrap",
+      justifyContent: "space-around",
+      overflow: "hidden",
+      backgroundColor: theme.palette.background.paper,
+    },
+    gridList: {
+      width: "80%",
+      height: 450,
+    },
+  }));
+
+  function srcset(image, width, height, rows = 1, cols = 1) {
+    return `${image}?w=${width * cols}&h=${
+      height * rows
+    }&fit=crop&auto=format 1x,
+      ${image}?w=${width * cols}&h=${
+      height * rows
+    }&fit=crop&auto=format&dpr=2 2x`;
+  }
+
+  const ImageGrid = ({ images, loaded }) => {
+    if (!loaded) return null;
+
+    return (
+      <ImageList
+        sx={{
+          width: "100%",
+          maxHeight: "100% !important",
+          // Promote the list into its own layer in Chrome. This costs memory, but helps keeping high FPS.
+          transform: "translateZ(0)",
+        }}
+        rowHeight={200}
+        gap={20}
+        cols={4}
+      >
+        {images.map((item, index) => {
+          const cols = item.featured ? 2 : 1;
+          const rows = item.featured ? 2 : 1;
+
+          return (
+            <ImageListItem key={item.id + index} cols={cols} rows={rows}>
+              <img
+                srcSet={srcset(item.url, 250, 200, rows, cols)}
+                alt={item.original_filename}
+                loading="lazy"
+              />
+              <ImageListItemBar
+                sx={{
+                  background:
+                    "linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, " +
+                    "rgba(0,0,0,0.3) 70%, rgba(0,0,0,0) 100%)",
+                }}
+                title={item.title}
+                position="top"
+                actionIcon={
+                  <div style={{ display: "flex", flexDirection: "row" }}>
+                    <IconButton
+                      sx={{
+                        color: "white",
+                      }}
+                      aria-label={`star ${item.title}`}
+                    >
+                      <StarBorderIcon />
+                    </IconButton>
+                  </div>
+                }
+                actionPosition="left"
+              />
+            </ImageListItem>
+          );
+        })}
+      </ImageList>
+    );
+  };
 
   async function getUploadedFiles() {
     setImagesFetched(false);
@@ -70,6 +154,10 @@ const App = () => {
     }
   }
 
+  useEffect(() => {
+    getUploadedFiles();
+  }, [justUploadedImage]);
+
   return (
     <div>
       <div>App here</div>
@@ -88,6 +176,7 @@ const App = () => {
       >
         Upload
       </button>
+      <ImageGrid images={uploadedImages} loaded={imagesFetched} />
     </div>
   );
 };
