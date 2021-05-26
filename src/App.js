@@ -2,13 +2,34 @@ import React, { useState } from "react";
 import axios from "axios";
 
 const App = () => {
+  const [imagesFetched, setImagesFetched] = useState(false);
   const [uploadImage, setUploadImage] = useState({});
   const [uploading, setUploading] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState([]);
   const [justUploadedImage, setJustUploadedImage] = useState({});
   const [error, setError] = useState({
     error_status: false,
     error_message: "",
   });
+
+  async function getUploadedFiles() {
+    setImagesFetched(false);
+    axios.defaults.headers.common["x-api-key"] =
+      "0e4a38a2-b9a3-4865-96b6-156639088101"; // Replace this with your API Key
+    let response = await axios
+      .get("https://api.thecatapi.com/v1/images", {
+        params: { limit: 100, size: "full" },
+      })
+      .then((response) => setUploadedImages(response.data))
+      .then(() => setImagesFetched(true))
+      .catch((error) => {
+        setError({
+          error_status: true,
+          error_message: error.response.data.message,
+        });
+        setImagesFetched(false);
+      });
+  }
 
   const uploadFile = async () => {
     setUploading(true);
