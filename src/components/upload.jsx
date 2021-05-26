@@ -1,6 +1,6 @@
 import { useHistory } from "react-router";
 
-const ImageUploadForm = ({ disable, uploadFile, onFilePicked, error }) => {
+const ImageUploadForm = ({ disable, uploadFile, onFilePicked, uploading }) => {
   const history = useHistory();
   return (
     <div

@@ -42,11 +42,6 @@ const Home = ({
         <button style={{ width: "30%" }} onClick={UploadRouteClickHandler}>
           Upload a Cat
         </button>
-        {error.error_status ? (
-          <ErrorMessage error={error} />
-        ) : (
-          <Status message={""} />
-        )}
       </div>
 
       <div style={{ margin: "8%" }}>

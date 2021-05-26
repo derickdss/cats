@@ -4,28 +4,31 @@ import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 import Upload from "./components/upload";
 import Home from "./components/home";
 import { useViewport } from "./hooks/customHooks";
+import ErrorMessage from "./components/error";
+import { Status } from "./components/error";
 
 function App() {
   const [imagesFetched, setImagesFetched] = useState(false);
   const [uploadFileReady, setUploadFileReady] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [uploadImage, setUploadImage] = useState({});
   const [justUploadedImage, setJustUploadedImage] = useState({});
   const [uploadedImages, setUploadedImages] = useState([]);
   const [favourites, setFavourites] = useState([]);
   const [votes, setVotes] = useState([]);
-  const [heroImageIndex, setHeroImageIndex] = useState(0);
   const breakpoint = 620;
   const [error, setError] = useState({
     error_status: false,
     error_message: "",
   });
-  const { width, height } = useViewport();
+  const { width } = useViewport();
+  const heroImageIndex = 0;
 
   async function getUploadedFiles() {
     setImagesFetched(false);
     axios.defaults.headers.common["x-api-key"] =
       "0e4a38a2-b9a3-4865-96b6-156639088101"; // Replace this with your API Key
-    let response = await axios
+    await axios
       .get("https://api.thecatapi.com/v1/images", {
         params: { limit: 100, size: "full" },
       })
@@ -43,13 +46,14 @@ function App() {
   }
 
   const uploadFile = async () => {
+    setUploading(true);
     let formData = new FormData();
     formData.append("file", uploadImage);
     formData.append("sub_id", Date.now());
 
     axios.defaults.headers.common["x-api-key"] =
       "0e4a38a2-b9a3-4865-96b6-156639088101"; //"DEMO-API-KEY"; // Replace this with your API Key
-    let response = await axios
+    await axios
       .post("https://api.thecatapi.com/v1/images/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       })
@@ -61,6 +65,7 @@ function App() {
           error_message: error.response.data.message,
         });
       });
+    setUploading(false);
     setUploadFileReady(false);
   };
 
@@ -158,7 +163,7 @@ function App() {
   async function getFavourites() {
     axios.defaults.headers.common["x-api-key"] =
       "0e4a38a2-b9a3-4865-96b6-156639088101"; // Replace this with your API Key
-    let response = await axios
+    await axios
       .get("https://api.thecatapi.com/v1/favourites")
       .then((response) => setFavourites(response.data))
       .catch((error) => {
@@ -210,13 +215,17 @@ function App() {
             width={width}
             breakpoint={breakpoint}
           />
+          {error.error_status ? (
+            <ErrorMessage error={error} />
+          ) : (
+            <Status message={uploading ? "loading..." : ""} />
+          )}
         </Route>
         <Route path="/upload">
           <Upload
             uploadFileReady={uploadFileReady}
             uploadFile={uploadFile}
             onFilePicked={onFilePicked}
-            error={error}
           />
         </Route>
       </Switch>
